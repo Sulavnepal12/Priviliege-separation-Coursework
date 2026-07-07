@@ -36,3 +36,16 @@ static void read_line(char *buf, size_t cap) {
         buf[len - 1] = '\0';
     }
 }
+static struct termios saved_term;
+
+static void disable_echo(void) {
+    struct termios t;
+    tcgetattr(STDIN_FILENO, &saved_term);
+    t = saved_term;
+    t.c_lflag &= ~ECHO;
+    tcsetattr(STDIN_FILENO, TCSANOW, &t);
+}
+
+static void restore_echo(void) {
+    tcsetattr(STDIN_FILENO, TCSANOW, &saved_term);
+}
