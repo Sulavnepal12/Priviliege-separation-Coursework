@@ -69,3 +69,13 @@ static int connect_to_backend(void) {
 
     return fd;
 }
+static int recv_response(int fd, auth_response_t *resp) {
+    ssize_t r = read(fd, resp, sizeof(*resp));
+    if (r != (ssize_t)sizeof(*resp)) {
+        fprintf(stderr, "Backend closed connection unexpectedly "
+                        "(got %zd bytes, expected %zu)\n",
+                        r, sizeof(*resp));
+        return -1;
+    }
+    return 0;
+}
