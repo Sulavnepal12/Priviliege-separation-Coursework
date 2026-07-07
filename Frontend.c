@@ -79,3 +79,49 @@ static int recv_response(int fd, auth_response_t *resp) {
     }
     return 0;
 }
+int main(void) {
+    auth_request_t  req;
+    auth_response_t resp;
+
+    memset(&req, 0, sizeof(req));
+    memset(&resp, 0, sizeof(resp));
+
+    printf("=== Privilege-Separated Authentication (Frontend) ===\n");
+
+    printf("Username: ");
+    fflush(stdout);
+    read_line(req.username, sizeof(req.username));
+
+    printf("Password: ");
+    fflush(stdout);
+    disable_echo();
+    read_line(req.password, sizeof(req.password));
+    restore_echo();
+    printf("\n");
+
+    int fd = connect_to_backend();
+
+    send_request(fd, &req);
+
+    int rc = recv_response(fd, &resp);
+
+    close(fd);
+
+    secure_zero(req.password, sizeof(req.password));
+    secure_zero(&req, sizeof(req));
+
+    if (rc != 0) {
+        fprintf(stderr, "Authentication attempt failed (IPC error)\n");
+        return EXIT_FAILURE;
+    }
+
+    if (resp.success) {
+        printf("Result: ACCESS GRANTED - %s\n", resp.message);
+    } else {
+        printf("Result: ACCESS DENIED - %s\n", resp.message);
+    }
+
+    secure_zero(&resp, sizeof(resp));
+
+    return resp.success ? EXIT_SUCCESS : EXIT_FAILURE;
+}
