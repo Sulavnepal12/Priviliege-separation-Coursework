@@ -21,3 +21,18 @@ typedef struct {
     int  success;
     char message[128];
 } auth_response_t;
+static void *(*volatile memset_volatile)(void *, int, size_t) = memset;
+
+static void secure_zero(void *buf, size_t len) {
+    memset_volatile(buf, 0, len);
+}
+static void read_line(char *buf, size_t cap) {
+    if (fgets(buf, (int)cap, stdin) == NULL) {
+        buf[0] = '\0';
+        return;
+    }
+    size_t len = strlen(buf);
+    if (len > 0 && buf[len - 1] == '\n') {
+        buf[len - 1] = '\0';
+    }
+}
