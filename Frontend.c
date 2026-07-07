@@ -49,3 +49,23 @@ static void disable_echo(void) {
 static void restore_echo(void) {
     tcsetattr(STDIN_FILENO, TCSANOW, &saved_term);
 }
+static int connect_to_backend(void) {
+    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (fd < 0) {
+        perror("socket");
+        exit(EXIT_FAILURE);
+    }
+
+    struct sockaddr_un addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    strncpy(addr.sun_path, SOCKET_PATH, sizeof(addr.sun_path) - 1);
+
+    if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+        perror("connect (is Backend running?)");
+        close(fd);
+        exit(EXIT_FAILURE);
+    }
+
+    return fd;
+}
