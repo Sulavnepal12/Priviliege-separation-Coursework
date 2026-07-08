@@ -92,3 +92,11 @@ System time   : 0.000 s
 Max RSS       : 1540 KB
 ---------------------------------------------
 
+Wed Jul  8 07:59:42 2026
+ | target=./test_safe wall=5.014 user=0.003 sys=0.000 rss=1624 timeout=0
+Wed Jul  8 08:00:42 2026
+ | target=./test_infinite_loop wall=10.218 user=9.990 sys=0.000 rss=1364 timeout=1
+Wed Jul  8 08:01:41 2026
+ | target=./test_memory wall=10.214 user=0.044 sys=2.972 rss=82880 timeout=1
+Wed Jul  8 08:02:32 2026
+ | target=./test_cpu wall=9.614 user=9.607 sys=0.008 rss=1564 timeout=0
