@@ -138,3 +138,48 @@ static int drop_privileges_permanently(const char *target_user) {
                      "Now running as uid=%d, euid=%d\n", getuid(), geteuid());
     return 0;
 }
+static void handle_client(int client_fd) {
+    auth_request_t req;
+    auth_response_t resp;
+    memset(&req, 0, sizeof(req));
+    memset(&resp, 0, sizeof(resp));
+
+    struct ucred peer;
+    socklen_t len = sizeof(peer);
+    if (getsockopt(client_fd, SOL_SOCKET, SO_PEERCRED, &peer, &len) == 0) {
+        fprintf(stderr, "[backend] Connection from pid=%d uid=%d gid=%d\n",
+                peer.pid, peer.uid, peer.gid);
+    }
+
+    ssize_t rn = read(client_fd, &req, sizeof(req));
+    __atomic_fetch_add(&g_stats->total_attempts, 1, __ATOMIC_SEQ_CST);
+
+    if (rn != (ssize_t)sizeof(req)) {
+        fprintf(stderr, "[DEBUG] rn=%zd expected=%zu\n", rn, sizeof(req));
+        __atomic_fetch_add(&g_stats->malformed_rejected, 1, __ATOMIC_SEQ_CST);
+        resp.success = 0;
+        snprintf(resp.message, sizeof(resp.message), "Malformed request");
+        write(client_fd, &resp, sizeof(resp));
+        secure_zero(&req, sizeof(req));
+        return;
+    }
+
+    req.username[MAX_USER_LEN - 1] = '\0';
+    req.password[MAX_PASS_LEN - 1] = '\0';
+
+    int ok = validate_credentials(req.username, req.password);
+    if (ok) {
+        __atomic_fetch_add(&g_stats->successful_attempts, 1, __ATOMIC_SEQ_CST);
+        resp.success = 1;
+        snprintf(resp.message, sizeof(resp.message), "Welcome, %s", req.username);
+    } else {
+        __atomic_fetch_add(&g_stats->failed_attempts, 1, __ATOMIC_SEQ_CST);
+        resp.success = 0;
+        snprintf(resp.message, sizeof(resp.message), "Invalid username or password");
+    }
+
+    write(client_fd, &resp, sizeof(resp));
+    secure_zero(&req, sizeof(req));
+    secure_zero(&resp, sizeof(resp));
+}
+
