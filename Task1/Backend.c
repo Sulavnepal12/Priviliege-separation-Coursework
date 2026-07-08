@@ -78,3 +78,27 @@ static int validate_credentials(const char *username, const char *password) {
     }
     return 0;
 }
+static auth_stats_t *setup_shared_memory(void) {
+    shm_unlink(SHM_NAME);
+    int fd = shm_open(SHM_NAME, O_CREAT | O_RDWR | O_EXCL, 0600);
+    if (fd < 0) {
+        perror("shm_open");
+        return NULL;
+    }
+    if (ftruncate(fd, sizeof(auth_stats_t)) != 0) {
+        perror("ftruncate");
+        close(fd);
+        shm_unlink(SHM_NAME);
+        return NULL;
+    }
+    void *addr = mmap(NULL, sizeof(auth_stats_t),
+                       PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    close(fd);
+    if (addr == MAP_FAILED) {
+        perror("mmap");
+        shm_unlink(SHM_NAME);
+        return NULL;
+    }
+    memset(addr, 0, sizeof(auth_stats_t));
+    return (auth_stats_t *)addr;
+}
