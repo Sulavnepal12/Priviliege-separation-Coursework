@@ -19,3 +19,8 @@
 static volatile sig_atomic_t g_timed_out = 0;
 static pid_t g_child_pid = -1;
 static atomic_bool g_child_alive;
+static void alarm_handler(int sig) {
+    (void)sig;
+    g_timed_out = 1;
+    if (g_child_pid > 0) kill(g_child_pid, SIGTERM);
+}
