@@ -102,3 +102,39 @@ static auth_stats_t *setup_shared_memory(void) {
     memset(addr, 0, sizeof(auth_stats_t));
     return (auth_stats_t *)addr;
 }
+static int drop_privileges_permanently(const char *target_user) {
+    struct passwd *pw = getpwnam(target_user);
+    if (pw == NULL) {
+        fprintf(stderr, "Cannot resolve user '%s'\n", target_user);
+        return -1;
+    }
+
+    uid_t target_uid = pw->pw_uid;
+    gid_t target_gid = pw->pw_gid;
+
+    if (setresgid(target_gid, target_gid, target_gid) != 0) {
+        perror("setresgid");
+        return -1;
+    }
+
+    if (setresuid(target_uid, target_uid, target_uid) != 0) {
+        perror("setresuid");
+        return -1;
+    }
+
+    if (geteuid() != target_uid) {
+        fprintf(stderr, "FATAL: privilege drop verification failed "
+                        "(geteuid()=%d, expected %d)\n",
+                        geteuid(), target_uid);
+        return -1;
+    }
+
+    if (setuid(0) == 0) {
+        fprintf(stderr, "FATAL: root privileges were reclaimable after drop!\n");
+        return -1;
+    }
+
+    fprintf(stderr, "[backend] Privileges permanently dropped. "
+                     "Now running as uid=%d, euid=%d\n", getuid(), geteuid());
+    return 0;
+}
