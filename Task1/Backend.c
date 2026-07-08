@@ -40,5 +40,22 @@ typedef struct {
 
 static auth_stats_t *g_stats = NULL;
 static volatile sig_atomic_t g_shutdown = 0;
+typedef struct {
+    const char *username;
+    const char *password;
+} credential_t;
 
+static const credential_t g_credentials[] = {
+    { "alice", "Str0ngPass!23" },
+    { "bob",   "AnotherSecret9" },
+};
+#define NUM_CREDENTIALS (sizeof(g_credentials) / sizeof(g_credentials[0]))
+
+static void *(*volatile secure_memset_ptr)(void *, int, size_t) = memset;
+
+static void secure_zero(void *buf, size_t len) {
+    if (buf != NULL && len > 0) {
+        secure_memset_ptr(buf, 0, len);
+    }
+}
 
