@@ -24,3 +24,21 @@ static void alarm_handler(int sig) {
     g_timed_out = 1;
     if (g_child_pid > 0) kill(g_child_pid, SIGTERM);
 }
+static void *monitor_fn(void *arg) {
+    (void)arg;
+    struct rusage u;
+    while (atomic_load(&g_child_alive)) {
+        getrusage(RUSAGE_CHILDREN, &u);
+        double cpu = u.ru_utime.tv_sec + u.ru_stime.tv_sec;
+        if (u.ru_maxrss > MEM_LIMIT_KB) {
+            fprintf(stderr, "[sandbox] MEMORY LIMIT EXCEEDED (%ld KB)\n", u.ru_maxrss);
+            kill(g_child_pid, SIGKILL);
+        }
+        if (cpu > CPU_LIMIT_SEC) {
+            fprintf(stderr, "[sandbox] CPU LIMIT EXCEEDED (%.0fs)\n", cpu);
+            kill(g_child_pid, SIGKILL);
+        }
+        usleep(100000);
+    }
+    return NULL;
+}
