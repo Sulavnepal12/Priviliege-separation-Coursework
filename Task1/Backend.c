@@ -183,3 +183,80 @@ static void handle_client(int client_fd) {
     secure_zero(&resp, sizeof(resp));
 }
 
+static void handle_sigint(int sig) {
+    (void)sig;
+    g_shutdown = 1;
+}
+
+int main(void) {
+    if (geteuid() != 0) {
+        fprintf(stderr, "Backend must be started as root (use sudo).\n");
+        return EXIT_FAILURE;
+    }
+
+    g_stats = setup_shared_memory();
+    if (g_stats == NULL) {
+        return EXIT_FAILURE;
+    }
+
+    unlink(SOCKET_PATH);
+    int listen_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (listen_fd < 0) {
+        perror("socket");
+        return EXIT_FAILURE;
+    }
+
+    struct sockaddr_un addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    strncpy(addr.sun_path, SOCKET_PATH, sizeof(addr.sun_path) - 1);
+
+    if (bind(listen_fd, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
+        perror("bind");
+        close(listen_fd);
+        return EXIT_FAILURE;
+    }
+    chmod(SOCKET_PATH, 0666);
+
+    if (listen(listen_fd, BACKLOG) != 0) {
+        perror("listen");
+        close(listen_fd);
+        return EXIT_FAILURE;
+    }
+
+    signal(SIGINT, handle_sigint);
+    signal(SIGTERM, handle_sigint);
+
+    if (drop_privileges_permanently(TARGET_USER) != 0) {
+        fprintf(stderr, "Refusing to continue without a verified privilege drop.\n");
+        close(listen_fd);
+        shm_unlink(SHM_NAME);
+        return EXIT_FAILURE;
+    }
+
+    fprintf(stderr, "[backend] Listening on %s (unprivileged)\n", SOCKET_PATH);
+
+    while (!g_shutdown) {
+        int client_fd = accept(listen_fd, NULL, NULL);
+        if (client_fd < 0) {
+            if (errno == EINTR) continue;
+            if (g_shutdown) break;
+            perror("accept");
+            continue;
+        }
+        handle_client(client_fd);
+        close(client_fd);
+    }
+
+    fprintf(stderr, "[backend] Shutting down. Stats: total=%lu success=%lu "
+                     "failed=%lu malformed=%lu\n",
+            g_stats->total_attempts, g_stats->successful_attempts,
+            g_stats->failed_attempts, g_stats->malformed_rejected);
+
+    secure_zero(g_stats, sizeof(auth_stats_t));
+    munmap(g_stats, sizeof(auth_stats_t));
+    shm_unlink(SHM_NAME);
+    close(listen_fd);
+    unlink(SOCKET_PATH);
+    return EXIT_SUCCESS;
+}
