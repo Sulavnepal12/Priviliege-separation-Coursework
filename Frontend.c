@@ -1,0 +1,127 @@
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <errno.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <termios.h>
+
+#define SOCKET_PATH   "/tmp/authsock"
+#define MAX_USERNAME  64
+#define MAX_PASSWORD  64
+
+typedef struct {
+    char username[MAX_USERNAME];
+    char password[MAX_PASSWORD];
+} auth_request_t;
+
+typedef struct {
+    int  success;
+    char message[128];
+} auth_response_t;
+static void *(*volatile memset_volatile)(void *, int, size_t) = memset;
+
+static void secure_zero(void *buf, size_t len) {
+    memset_volatile(buf, 0, len);
+}
+static void read_line(char *buf, size_t cap) {
+    if (fgets(buf, (int)cap, stdin) == NULL) {
+        buf[0] = '\0';
+        return;
+    }
+    size_t len = strlen(buf);
+    if (len > 0 && buf[len - 1] == '\n') {
+        buf[len - 1] = '\0';
+    }
+}
+static struct termios saved_term;
+
+static void disable_echo(void) {
+    struct termios t;
+    tcgetattr(STDIN_FILENO, &saved_term);
+    t = saved_term;
+    t.c_lflag &= ~ECHO;
+    tcsetattr(STDIN_FILENO, TCSANOW, &t);
+}
+
+static void restore_echo(void) {
+    tcsetattr(STDIN_FILENO, TCSANOW, &saved_term);
+}
+static int connect_to_backend(void) {
+    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (fd < 0) {
+        perror("socket");
+        exit(EXIT_FAILURE);
+    }
+
+    struct sockaddr_un addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    strncpy(addr.sun_path, SOCKET_PATH, sizeof(addr.sun_path) - 1);
+
+    if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+        perror("connect (is Backend running?)");
+        close(fd);
+        exit(EXIT_FAILURE);
+    }
+
+    return fd;
+}
+static int recv_response(int fd, auth_response_t *resp) {
+    ssize_t r = read(fd, resp, sizeof(*resp));
+    if (r != (ssize_t)sizeof(*resp)) {
+        fprintf(stderr, "Backend closed connection unexpectedly "
+                        "(got %zd bytes, expected %zu)\n",
+                        r, sizeof(*resp));
+        return -1;
+    }
+    return 0;
+}
+int main(void) {
+    auth_request_t  req;
+    auth_response_t resp;
+
+    memset(&req, 0, sizeof(req));
+    memset(&resp, 0, sizeof(resp));
+
+    printf("=== Privilege-Separated Authentication (Frontend) ===\n");
+
+    printf("Username: ");
+    fflush(stdout);
+    read_line(req.username, sizeof(req.username));
+
+    printf("Password: ");
+    fflush(stdout);
+    disable_echo();
+    read_line(req.password, sizeof(req.password));
+    restore_echo();
+    printf("\n");
+
+    int fd = connect_to_backend();
+
+    send_request(fd, &req);
+
+    int rc = recv_response(fd, &resp);
+
+    close(fd);
+
+    secure_zero(req.password, sizeof(req.password));
+    secure_zero(&req, sizeof(req));
+
+    if (rc != 0) {
+        fprintf(stderr, "Authentication attempt failed (IPC error)\n");
+        return EXIT_FAILURE;
+    }
+
+    if (resp.success) {
+        printf("Result: ACCESS GRANTED - %s\n", resp.message);
+    } else {
+        printf("Result: ACCESS DENIED - %s\n", resp.message);
+    }
+
+    secure_zero(&resp, sizeof(resp));
+
+    return resp.success ? EXIT_SUCCESS : EXIT_FAILURE;
+}
