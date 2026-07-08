@@ -58,4 +58,23 @@ static void secure_zero(void *buf, size_t len) {
         secure_memset_ptr(buf, 0, len);
     }
 }
+static int constant_time_equal(const char *a, const char *b, size_t max_len) {
+    size_t la = strnlen(a, max_len);
+    size_t lb = strnlen(b, max_len);
+    unsigned char diff = (unsigned char)(la ^ lb);
+    for (size_t i = 0; i < max_len; i++) {
+        unsigned char ca = (i < la) ? (unsigned char)a[i] : 0;
+        unsigned char cb = (i < lb) ? (unsigned char)b[i] : 0;
+        diff |= (unsigned char)(ca ^ cb);
+    }
+    return diff == 0;
+}
 
+static int validate_credentials(const char *username, const char *password) {
+    for (size_t i = 0; i < NUM_CREDENTIALS; i++) {
+        if (strncmp(username, g_credentials[i].username, MAX_USER_LEN) == 0) {
+            return constant_time_equal(password, g_credentials[i].password, MAX_PASS_LEN);
+        }
+    }
+    return 0;
+}
