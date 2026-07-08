@@ -1,0 +1,11 @@
+*.o
+*.out
+frontend
+backend
+sandbox
+launcher
+test_safe
+test_infinite_loop
+test_cpu
+test_memory
+*.save

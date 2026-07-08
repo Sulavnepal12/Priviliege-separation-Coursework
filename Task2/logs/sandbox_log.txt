@@ -1,0 +1,94 @@
+---------------------------------------------
+Timestamp     : 2026-07-04 12:53:11
+Target        : ./test_safe
+Timed out     : YES (killed)
+Wall time     : 5.201 s
+User CPU time : 0.003 s
+System time   : 0.000 s
+Max RSS       : 1572 KB
+---------------------------------------------
+
+---------------------------------------------
+Timestamp     : 2026-07-04 12:54:01
+Target        : ./test_infinite_loop
+Timed out     : YES (killed)
+Wall time     : 5.201 s
+User CPU time : 5.006 s
+System time   : 0.000 s
+Max RSS       : 1356 KB
+---------------------------------------------
+
+---------------------------------------------
+Timestamp     : 2026-07-04 12:54:33
+Target        : ./test_cpu
+Timed out     : no
+Exit code     : 127
+Wall time     : 0.001 s
+User CPU time : 0.000 s
+System time   : 0.000 s
+Max RSS       : 1464 KB
+---------------------------------------------
+
+---------------------------------------------
+Timestamp     : 2026-07-04 12:55:07
+Target        : ./test_memory
+Timed out     : YES (killed)
+Wall time     : 5.345 s
+User CPU time : 0.042 s
+System time   : 1.296 s
+Max RSS       : 44784 KB
+---------------------------------------------
+
+---------------------------------------------
+Timestamp     : 2026-07-04 13:05:02
+Target        : ./test_safe
+Timed out     : no
+Exit code     : 0
+Wall time     : 5.007 s
+User CPU time : 0.004 s
+System time   : 0.000 s
+Max RSS       : 1516 KB
+---------------------------------------------
+
+---------------------------------------------
+Timestamp     : 2026-07-04 13:05:23
+Target        : ./test_infinite_loop
+Timed out     : YES (killed)
+Wall time     : 10.202 s
+User CPU time : 9.964 s
+System time   : 0.004 s
+Max RSS       : 1360 KB
+---------------------------------------------
+
+---------------------------------------------
+Timestamp     : 2026-07-04 13:05:40
+Target        : ./test_cpu
+Timed out     : no
+Exit code     : 0
+Wall time     : 8.646 s
+User CPU time : 8.619 s
+System time   : 0.000 s
+Max RSS       : 1444 KB
+---------------------------------------------
+
+---------------------------------------------
+Timestamp     : 2026-07-04 13:06:19
+Target        : ./test_memory
+Timed out     : YES (killed)
+Wall time     : 10.201 s
+User CPU time : 0.043 s
+System time   : 1.978 s
+Max RSS       : 87772 KB
+---------------------------------------------
+
+---------------------------------------------
+Timestamp     : 2026-07-04 13:09:40
+Target        : ./test_safe
+Timed out     : no
+Exit code     : 0
+Wall time     : 5.007 s
+User CPU time : 0.004 s
+System time   : 0.000 s
+Max RSS       : 1540 KB
+---------------------------------------------
+
