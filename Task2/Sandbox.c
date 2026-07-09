@@ -76,3 +76,13 @@ int main(int argc, char *argv[]) {
         perror("execve");
         _exit(127);
     }
+g_child_pid = pid;
+    atomic_init(&g_child_alive, true);
+
+    pthread_t tid;
+    pthread_create(&tid, NULL, monitor_fn, NULL);
+
+    struct sigaction sa = {0};
+    sa.sa_handler = alarm_handler;
+    sigaction(SIGALRM, &sa, NULL);
+    alarm(TIMEOUT_SEC);
