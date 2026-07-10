@@ -59,23 +59,6 @@ int main(int argc, char *argv[]) {
         perror("execve");
         _exit(127);
     }
-int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        fprintf(stderr, "Usage: %s <program> [args]\n", argv[0]);
-        return EXIT_FAILURE;
-    }
-
-    struct timespec t1, t2;
-    clock_gettime(CLOCK_MONOTONIC, &t1);
-
-    pid_t pid = fork();
-    if (pid < 0) { perror("fork"); return EXIT_FAILURE; }
-
-    if (pid == 0) {
-        execve(argv[1], &argv[1], NULL);
-        perror("execve");
-        _exit(127);
-    }
 g_child_pid = pid;
     atomic_init(&g_child_alive, true);
 
