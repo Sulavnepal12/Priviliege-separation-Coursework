@@ -86,3 +86,18 @@ g_child_pid = pid;
     sa.sa_handler = alarm_handler;
     sigaction(SIGALRM, &sa, NULL);
     alarm(TIMEOUT_SEC);
+int status = 0;
+    waitpid(pid, &status, 0);
+
+    alarm(0);
+    atomic_store(&g_child_alive, false);
+    pthread_join(tid, NULL);
+
+    if (g_timed_out) {
+        usleep(200000);
+        if (waitpid(pid, &status, WNOHANG) == 0) {
+            kill(pid, SIGKILL);
+            waitpid(pid, &status, 0);
+        }
+        fprintf(stderr, "[sandbox] Timeout exceeded, killed.\n");
+    }
