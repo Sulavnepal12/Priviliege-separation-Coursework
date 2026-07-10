@@ -101,3 +101,31 @@ int status = 0;
         }
         fprintf(stderr, "[sandbox] Timeout exceeded, killed.\n");
     }
+clock_gettime(CLOCK_MONOTONIC, &t2);
+    double wall = (t2.tv_sec - t1.tv_sec) + (t2.tv_nsec - t1.tv_nsec) / 1e9;
+
+    struct rusage r;
+    getrusage(RUSAGE_CHILDREN, &r);
+    double user = r.ru_utime.tv_sec + r.ru_utime.tv_usec / 1e6;
+    double sys  = r.ru_stime.tv_sec + r.ru_stime.tv_usec / 1e6;
+
+    printf("[sandbox] Target   : %s\n", argv[1]);
+    printf("[sandbox] Wall time: %.3f s\n", wall);
+    printf("[sandbox] User CPU : %.3f s\n", user);
+    printf("[sandbox] Sys time : %.3f s\n", sys);
+    printf("[sandbox] Max RSS  : %ld KB\n", r.ru_maxrss);
+
+    if (g_timed_out) printf("[sandbox] Result   : TIMEOUT\n");
+    else if (WIFEXITED(status)) printf("[sandbox] Result   : exited, code=%d\n", WEXITSTATUS(status));
+    else if (WIFSIGNALED(status)) printf("[sandbox] Result   : killed by signal %d\n", WTERMSIG(status));
+
+    FILE *log = fopen(LOG_FILE, "a");
+    if (log) {
+        time_t now = time(NULL);
+        fprintf(log, "%s | target=%s wall=%.3f user=%.3f sys=%.3f rss=%ld timeout=%d\n",
+                ctime(&now), argv[1], wall, user, sys, r.ru_maxrss, g_timed_out);
+        fclose(log);
+    }
+
+    return 0;
+}
